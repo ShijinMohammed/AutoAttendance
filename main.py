@@ -28,7 +28,7 @@ def check_exists_by_partial_link_text(text):
         return False
     return True
 
-#Checks if a n element with the given css selector exists in the page
+#Checks if an element with the given css selector exists in the page
 def check_exists_by_css_selector(selector):
     try:
         driver.find_element_by_css_selector(selector)
