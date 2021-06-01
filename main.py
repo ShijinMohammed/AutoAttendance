@@ -1,6 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, NoSuchWindowException
 from threading import Thread
 from datetime import datetime, time
 
@@ -20,6 +20,7 @@ driver = webdriver.Chrome()
 loggedIn = False
 attendanceMarked = False
 
+#Checks if a partial hyper link text exists in the page
 def check_exists_by_partial_link_text(text):
     try:
         driver.find_element_by_partial_link_text(text)
@@ -27,6 +28,7 @@ def check_exists_by_partial_link_text(text):
         return False
     return True
 
+#Checks if a n element with the given css selector exists in the page
 def check_exists_by_css_selector(selector):
     try:
         driver.find_element_by_css_selector(selector)
@@ -34,9 +36,11 @@ def check_exists_by_css_selector(selector):
         return False
     return True
 
+#Checks if a text exists in the page
 def check_exists_by_text(text):
     return (text in driver.page_source)
 
+#Checks if an element with given id exists in the page
 def check_exists_by_id(x):
     try:
         driver.find_element_by_id(x)
@@ -45,13 +49,14 @@ def check_exists_by_id(x):
     return True
 
 def login():
+    #If login page gives error, reload after 5 seconds
     try:
         driver.get("http://moodle.mec.ac.in/login/index.php")
     except:
         t.sleep(5)
         login()
         return
-
+    
     driver.find_element_by_id("username").send_keys(email)
     driver.find_element_by_id("password").send_keys(password)
     driver.find_element_by_id("loginbtn").click()
@@ -68,7 +73,9 @@ def markAttendance(url):
         return
     
     global attendanceMarked
-    attendanceMarked = True
+    
+    if not url == tt['mentoring']:
+        attendanceMarked = True
 
     #Checks if submit link is available, if not, reloads every 60 seconds until found
     while not check_exists_by_partial_link_text("Submit attendance"):
@@ -95,6 +102,9 @@ def markAttendance(url):
             markAttendance(url)
             break
         continue
+    
+    if not url == tt['mentoring']:
+        markAttendance(tt['mentoring'])
 
 
     
@@ -135,6 +145,16 @@ def getPeriod():
         else:
             return -1
 
+#checks if the browser is closed
+def isBrowserClosed():
+    isClosed = False
+    try:
+        driver.find_element_by_tag_name("html")
+    except NoSuchWindowException:
+        isClosed = True
+
+    return isClosed
+
      
 prevPeriod = getPeriod()
 
@@ -151,6 +171,8 @@ while(True):
         if not loggedIn:
             login()
             loggedIn = True
+            th = Thread(target = markAttendance,args=(tt['mentoring'],))
+            th.start()
         else:
             th = Thread(target = markAttendance, args=(subjectPath,))
             if not attendanceMarked:
@@ -165,6 +187,10 @@ while(True):
     else:
         attendanceMarked = False
         driver.get(os.getcwd()+"/Resources/NoPeriod.html")
+
+    #Exit application if browser is closed
+    if isBrowserClosed():
+        exit()
         
     prevPeriod = getPeriod()
 
